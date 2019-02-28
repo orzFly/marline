@@ -1,7 +1,17 @@
-import ansiEscapes from 'ansi-escapes';
 import exitHook from 'exit-hook';
 import Navybird from 'navybird';
 import termSize from 'term-size';
+
+namespace ansiEscapes {
+  export const eraseLine = '\x1B[2K';
+  export const cursorSavePosition = '\x1B[s';
+  export const cursorRestorePosition = '\x1B[u';
+  export const cursorDown = (count: number = 1) => `\x1B[${count}B`
+  export const cursorUp = (count: number = 1) => `\x1B[${count}A`
+  export const cursorTo = (x: number, y: number) => `\x1B[${y};${x}H`
+  export const setTopBottomMargin = (top: number = 1, bottom?: number) => `\x1B[${top};${bottom || ""}r`
+  export const resetTopBottomMargin = `\x1B[;r`
+}
 
 const marline = new (class Marline {
   readonly stream = process.stdout;
@@ -50,6 +60,7 @@ const marline = new (class Marline {
 
     this.stream.on('resize', this.handleStdoutResize$);
     this.setMargin();
+
     this.redraw();
   }
 
@@ -59,43 +70,48 @@ const marline = new (class Marline {
     this.stream.off('resize', this.handleStdoutResize$);
 
     if (!this.isAvailable) return;
+    this.resetMargin();
+
+    this.bufferBottom.fill("");
+    this.bufferTop.fill("");
     this.redraw();
-    this.softReset();
   }
 
   private get canDraw() {
     return this.isAvailable && this._termSize;
   }
 
+
   private setMargin() {
     if (!this.canDraw) return;
 
     const seq: string[] = [];
     seq.push(ansiEscapes.cursorSavePosition);
-    seq.push(`\x1B[;r`);
+    seq.push(ansiEscapes.resetTopBottomMargin);
     seq.push(ansiEscapes.cursorRestorePosition);
     if (this.marginBottom > 0) {
-      seq.push(`\x1B[s`);
+      seq.push(ansiEscapes.cursorSavePosition);
       for (let i = 0; i < this.marginBottom; i++) {
         seq.push(`\n`);
       }
-      seq.push(`\x1B[u`);
-      seq.push(`\x1B[${this.marginBottom}B`);
-      seq.push(`\x1B[${this.marginBottom}A`);
+      seq.push(ansiEscapes.cursorRestorePosition);
+      seq.push(ansiEscapes.cursorDown(this.marginBottom));
+      seq.push(ansiEscapes.cursorUp(this.marginBottom));
     }
-    seq.push(`\x1B[s`);
-    seq.push(`\x1B[${1 + this.marginTop};${this._termSize!.rows - this.marginBottom}r`);
-    seq.push(`\x1B[u`);
+    seq.push(ansiEscapes.cursorSavePosition);
+    seq.push(ansiEscapes.setTopBottomMargin(1 + this.marginTop, this._termSize!.rows - this.marginBottom));
+    seq.push(ansiEscapes.cursorRestorePosition);
     this.stream.write(seq.join(""));
   }
 
-  private softReset() {
+  private resetMargin() {
     if (!this.canDraw) return;
 
     const seq: string[] = [];
-    seq.push(`\x1B[s`);
-    seq.push(`\x1B[;r`);
-    seq.push(`\x1B[u`);
+    seq.push(ansiEscapes.cursorSavePosition);
+    seq.push(ansiEscapes.resetTopBottomMargin);
+    seq.push(ansiEscapes.cursorRestorePosition);
+
     this.stream.write(seq.join(""));
   }
 
@@ -104,22 +120,22 @@ const marline = new (class Marline {
     if (!this.canDraw) return;
 
     const seq: string[] = [];
-    seq.push(`\x1B[s`);
+    seq.push(ansiEscapes.cursorSavePosition);
     if (this.marginTop > 0) {
       for (let i = 0; i < this.marginTop; i++) {
-        seq.push(`\x1B[i + 1};1H`);
-        seq.push(`\x1B[2K`);
+        seq.push(ansiEscapes.cursorTo(1, i + 1));
+        seq.push(ansiEscapes.eraseLine);
         seq.push(this.bufferTop[i]);
       }
     }
     if (this.marginBottom > 0) {
       for (let i = 0; i < this.marginBottom; i++) {
-        seq.push(`\x1B[${this._termSize!.rows - this.marginBottom + i + 1};1H`);
-        seq.push(`\x1B[2K`);
+        seq.push(ansiEscapes.cursorTo(1, this._termSize!.rows - this.marginBottom + i + 1));
+        seq.push(ansiEscapes.eraseLine);
         seq.push(this.bufferBottom[i]);
       }
     }
-    seq.push(`\x1B[u`);
+    seq.push(ansiEscapes.cursorRestorePosition);
     this.stream.write(seq.join(""));
   }
 })();
@@ -133,7 +149,7 @@ async function main() {
   for (let i = 0; i < 100; i++) {
     console.log(i);
     marline.redraw();
-    await Navybird.delay(100);
+    await Navybird.delay(1000);
   }
 
   marline.stop();
