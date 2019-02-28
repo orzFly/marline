@@ -1,5 +1,4 @@
 import exitHook from 'exit-hook';
-import Navybird from 'navybird';
 import termSize from 'term-size';
 
 namespace ansiEscapes {
@@ -13,7 +12,7 @@ namespace ansiEscapes {
   export const resetTopBottomMargin = `\x1B[;r`
 }
 
-const marline = new (class Marline {
+export class Marline {
   readonly stream = process.stdout;
   readonly isAvailable = (() => {
     if (!this.stream.isTTY) return false;
@@ -24,12 +23,20 @@ const marline = new (class Marline {
     return true;
   })();
 
-  readonly marginBottom = 2
-  readonly marginTop = 0
-  readonly bufferTop: string[] = new Array<string>(this.marginTop).fill("")
-  readonly bufferBottom: string[] = new Array<string>(this.marginBottom).fill("")
+  readonly marginBottom: number
+  readonly marginTop: number
+  readonly bufferTop: string[]
+  readonly bufferBottom: string[]
 
-  constructor() {
+  constructor(options: {
+    marginBottom?: number,
+    marginTop?: number
+  } = {}) {
+    this.marginBottom = options.marginBottom === undefined ? 1 : options.marginBottom
+    this.marginTop = options.marginTop === undefined ? 0 : options.marginTop
+
+    this.bufferTop = new Array<string>(this.marginTop).fill("");
+    this.bufferBottom = new Array<string>(this.marginBottom).fill("");
   }
 
   private _termSize?: termSize.TermSize
@@ -56,25 +63,26 @@ const marline = new (class Marline {
   start() {
     if (!this.isAvailable) return;
     if (this._started) return;
+    if (activeMarline) throw new Error('Another Marline instance is running.');
     this._started = true;
-
+    activeMarline = this;
     this.stream.on('resize', this.handleStdoutResize$);
-    this.setMargin();
 
-    this.redraw();
+    this.setMargin();
+    this.redrawInternal();
   }
 
   stop() {
     if (!this._started) return;
     this._started = false;
+    activeMarline = null;
     this.stream.off('resize', this.handleStdoutResize$);
 
     if (!this.isAvailable) return;
     this.resetMargin();
-
     this.bufferBottom.fill("");
     this.bufferTop.fill("");
-    this.redraw();
+    this.redrawInternal();
   }
 
   private get canDraw() {
@@ -115,8 +123,7 @@ const marline = new (class Marline {
     this.stream.write(seq.join(""));
   }
 
-  public redraw() {
-    if (!this._started) return;
+  private redrawInternal() {
     if (!this.canDraw) return;
 
     const seq: string[] = [];
@@ -125,34 +132,27 @@ const marline = new (class Marline {
       for (let i = 0; i < this.marginTop; i++) {
         seq.push(ansiEscapes.cursorTo(1, i + 1));
         seq.push(ansiEscapes.eraseLine);
-        seq.push(this.bufferTop[i]);
+        seq.push(this.bufferTop[i] || "");
       }
     }
     if (this.marginBottom > 0) {
       for (let i = 0; i < this.marginBottom; i++) {
         seq.push(ansiEscapes.cursorTo(1, this._termSize!.rows - this.marginBottom + i + 1));
         seq.push(ansiEscapes.eraseLine);
-        seq.push(this.bufferBottom[i]);
+        seq.push(this.bufferBottom[i] || "");
       }
     }
     seq.push(ansiEscapes.cursorRestorePosition);
     this.stream.write(seq.join(""));
   }
-})();
 
-exitHook(() => marline.stop())
-
-async function main() {
-  marline.start();
-
-  await Navybird.delay(100);
-  for (let i = 0; i < 100; i++) {
-    console.log(i);
-    marline.redraw();
-    await Navybird.delay(1000);
+  public redraw() {
+    if (!this._started) return;
+    this.redrawInternal();
   }
-
-  marline.stop();
 }
 
-main();
+let activeMarline: Marline | null = null;
+exitHook(() => {
+  if (activeMarline) activeMarline.stop();
+})
