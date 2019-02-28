@@ -1,0 +1,35 @@
+{
+  "name": "marline",
+  "version": "0.0.0",
+  "files": [
+    "lib"
+  ],
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.1.4",
+    "@types/mocha": "^5.2.5",
+    "chai": "^4.1.2",
+    "coveralls": "^3.0.2",
+    "mocha": "^6.0.2",
+    "nyc": "^13.0.1",
+    "rimraf": "^2.6.2",
+    "ts-node": "^8.0.2",
+    "tslint": "^5.11.0",
+    "typescript": "^3.3.3333"
+  },
+  "scripts": {
+    "prepack": "yarn cleanbuild",
+    "prepublish": "yarn cleanbuild",
+    "build": "node_modules/.bin/tsc",
+    "clean": "node_modules/.bin/rimraf lib",
+    "cleanbuild": "yarn clean && yarn build",
+    "cleanwatch": "yarn clean && yarn watch",
+    "lint": "node_modules/.bin/tslint --project tsconfig.json --config tslint.json",
+    "test:coverage": "node_modules/.bin/nyc node_modules/.bin/mocha",
+    "test:coveralls": "node_modules/.bin/nyc report --reporter=text-lcov | node_modules/.bin/coveralls",
+    "test": "node_modules/.bin/mocha --timeout 10000",
+    "watch": "node_modules/.bin/tsc -w"
+  }
+}
