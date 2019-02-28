@@ -68,6 +68,7 @@ export class Marline {
     activeMarline = this;
     this.stream.on('resize', this.handleStdoutResize$);
 
+    this.handleStdoutResize();
     this.setMargin();
     this.redrawInternal();
   }

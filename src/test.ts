@@ -14,6 +14,9 @@ async function main() {
   for (let i = 0; i < 100; i++) {
     console.log(i);
     await Navybird.delay(1000);
+
+    if (marline.started) marline.stop()
+    else marline.start()
   }
 
   clearInterval(interval);
