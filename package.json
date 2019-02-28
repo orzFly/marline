@@ -8,11 +8,18 @@
   "typings": "lib/index.d.ts",
   "license": "MIT",
   "devDependencies": {
+    "@types/ansi-escapes": "^3.0.0",
     "@types/chai": "^4.1.4",
+    "@types/exit-hook": "^1.1.0",
     "@types/mocha": "^5.2.5",
+    "@types/node": "^11.9.5",
+    "@types/term-size": "^1.2.0",
+    "@types/window-size": "^0.2.4",
+    "@zeit/ncc": "^0.15.2",
     "chai": "^4.1.2",
     "coveralls": "^3.0.2",
     "mocha": "^6.0.2",
+    "navybird": "^0.1.0",
     "nyc": "^13.0.1",
     "rimraf": "^2.6.2",
     "ts-node": "^8.0.2",
@@ -21,7 +28,6 @@
   },
   "scripts": {
     "prepack": "yarn cleanbuild",
-    "prepublish": "yarn cleanbuild",
     "build": "node_modules/.bin/tsc",
     "clean": "node_modules/.bin/rimraf lib",
     "cleanbuild": "yarn clean && yarn build",
@@ -31,5 +37,10 @@
     "test:coveralls": "node_modules/.bin/nyc report --reporter=text-lcov | node_modules/.bin/coveralls",
     "test": "node_modules/.bin/mocha --timeout 10000",
     "watch": "node_modules/.bin/tsc -w"
+  },
+  "dependencies": {
+    "ansi-escapes": "^3.2.0",
+    "exit-hook": "^2.0.0",
+    "term-size": "^1.2.0"
   }
 }

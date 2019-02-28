@@ -14,7 +14,9 @@
     "moduleResolution": "node",
     "forceConsistentCasingInFileNames": true,
     "stripInternal": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "strict": true,
+    "esModuleInterop": true
   },
   "include": [
     "src/**/*.ts"
