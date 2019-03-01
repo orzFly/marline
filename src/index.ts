@@ -47,7 +47,7 @@ export class Marline {
     this.bufferBottom = new Array<string>(this.marginBottom).fill("");
   }
 
-  getTermSize() {
+  private getTermSize() {
     if (this.stream && this.stream.columns && this.stream.rows) {
       return { columns: this.stream.columns, rows: this.stream.rows };
     }
@@ -139,32 +139,36 @@ export class Marline {
     this.stream.write(seq.join(""));
   }
 
+  public redraw() {
+    if (!this._started) return;
+    this.redrawInternal();
+  }
+
   private redrawInternal() {
     if (!this.canDraw) return;
 
     const seq: string[] = [];
     seq.push(ansiEscapes.cursorSavePosition);
-    if (this.marginTop > 0) {
-      for (let i = 0; i < this.marginTop; i++) {
-        seq.push(ansiEscapes.cursorTo(1, i + 1));
-        seq.push(ansiEscapes.eraseLine);
-        seq.push(this.bufferTop[i] || "");
-      }
+    for (let i = 0; i < this.marginTop; i++) {
+      seq.push(this.redrawTopLineSeq(i));
     }
-    if (this.marginBottom > 0) {
-      for (let i = 0; i < this.marginBottom; i++) {
-        seq.push(ansiEscapes.cursorTo(1, this._termSize!.rows - this.marginBottom + i + 1));
-        seq.push(ansiEscapes.eraseLine);
-        seq.push(this.bufferBottom[i] || "");
-      }
+    for (let i = 0; i < this.marginBottom; i++) {
+      seq.push(this.redrawBottomLineSeq(i));
     }
     seq.push(ansiEscapes.cursorRestorePosition);
     this.stream.write(seq.join(""));
   }
 
-  public redraw() {
-    if (!this._started) return;
-    this.redrawInternal();
+  private redrawTopLineSeq(index: number) {
+    return ansiEscapes.cursorTo(1, index + 1) +
+      ansiEscapes.eraseLine +
+      String(this.bufferTop[index] || "");
+  }
+
+  private redrawBottomLineSeq(index: number) {
+    return ansiEscapes.cursorTo(1, this._termSize!.rows - this.marginBottom + index + 1) +
+      ansiEscapes.eraseLine +
+      String(this.bufferBottom[index] || "");
   }
 }
 
