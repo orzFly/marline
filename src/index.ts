@@ -1,5 +1,4 @@
 import exitHook from 'exit-hook';
-import termSize from 'term-size';
 
 namespace ansiEscapes {
   export const eraseLine = '\x1B[2K';
@@ -12,26 +11,35 @@ namespace ansiEscapes {
   export const resetTopBottomMargin = `\x1B[;r`
 }
 
+interface ITermSize {
+  rows: number;
+  columns: number;
+}
+
 export class Marline {
-  readonly stream = process.stdout;
-  readonly isAvailable = (() => {
-    if (!this.stream.isTTY) return false;
-
-    this._termSize = termSize();
-    if (!this._termSize) return false;
-
-    return true;
-  })();
-
+  readonly stream: NodeJS.WriteStream;
   readonly marginBottom: number
   readonly marginTop: number
   readonly bufferTop: string[]
   readonly bufferBottom: string[]
+  readonly isAvailable: boolean
 
   constructor(options: {
+    stream?: NodeJS.WriteStream,
     marginBottom?: number,
     marginTop?: number
   } = {}) {
+    this.stream = options.stream || process.stderr;
+    this.isAvailable = false;
+    do {
+      if (!this.stream.isTTY) break;
+
+      this._termSize = this.getTermSize();
+      if (!this._termSize) break;
+
+      this.isAvailable = true;
+    } while (false);
+
     this.marginBottom = options.marginBottom === undefined ? 1 : options.marginBottom
     this.marginTop = options.marginTop === undefined ? 0 : options.marginTop
 
@@ -39,7 +47,14 @@ export class Marline {
     this.bufferBottom = new Array<string>(this.marginBottom).fill("");
   }
 
-  private _termSize?: termSize.TermSize
+  getTermSize() {
+    if (this.stream && this.stream.columns && this.stream.rows) {
+      return { columns: this.stream.columns, rows: this.stream.rows };
+    }
+    return undefined;
+  }
+
+  private _termSize?: ITermSize | undefined
   get termSize() {
     return this._termSize
   }
@@ -48,7 +63,7 @@ export class Marline {
   private handleStdoutResize() {
     if (!this.isAvailable) return;
 
-    this._termSize = termSize();
+    this._termSize = this.getTermSize();
     if (this._started) {
       this.setMargin();
       this.redraw();
