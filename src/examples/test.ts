@@ -55,7 +55,7 @@ async function main() {
     progress = i;
     refresh();
     marline.redraw();
-    for (let j = 0; j < 10; j++) {
+    for (let j = 0; j < 20; j++) {
       const word = junkWord();
       console.log(word);
       word.forEach((val, index) => {
@@ -63,11 +63,13 @@ async function main() {
         if (!map[val]) map[val] = 0;
         map[val]++;
       })
-      await delay(Math.random() * 100 + 10);
+      await delay(Math.random() * 50 + 10);
     }
-    console.log(`${i} Finished`);
   }
+
   marline.stop();
+
+  console.log(`${top(0)} ${top(1)} ${top(2)}`)
 }
 
 main();
