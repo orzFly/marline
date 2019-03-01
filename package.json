@@ -24,7 +24,7 @@
     "typescript": "^3.3.3333"
   },
   "scripts": {
-    "prepack": "yarn cleanbuild",
+    "prepack": "yarn cleanbuild && node_modules/.bin/rimraf lib/examples",
     "build": "node_modules/.bin/tsc",
     "clean": "node_modules/.bin/rimraf lib",
     "cleanbuild": "yarn clean && yarn build",
