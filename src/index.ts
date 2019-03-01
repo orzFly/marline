@@ -180,6 +180,8 @@ export class Marline {
   }
 }
 
+export default Marline;
+
 let activeMarline: Marline | null = null;
 let exitHookInstalled = false;
 function installExitHook() {
