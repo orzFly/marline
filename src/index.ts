@@ -9,14 +9,8 @@ namespace ansiEscapes {
   export const setTopBottomMargin = (top: number = 1, bottom?: number) => `\x1B[${top};${bottom || ""}r`
   export const resetTopBottomMargin = `\x1B[;r`
 
-  export let cursorSavePosition = '\x1B[s';
-  export let cursorRestorePosition = '\x1B[u';
-
-  const isAppleTerminal = process.env.TERM_PROGRAM === 'Apple_Terminal' && process.env.TERM === 'xterm-256color';
-  if (isAppleTerminal) {
-    cursorSavePosition = '\x1B[7';
-    cursorRestorePosition = '\x1B[8';
-  }
+  export let cursorSavePosition = '\x1B7';
+  export let cursorRestorePosition = '\x1B8';
 }
 
 interface ITermSize {
@@ -88,6 +82,8 @@ export class Marline extends EventEmitter {
     return this._started;
   }
 
+  private _resizeListened: boolean = false
+
   start() {
     if (!this.isAvailable) return;
     if (this._started) return;
@@ -95,7 +91,10 @@ export class Marline extends EventEmitter {
     installExitHook();
     this._started = true;
     activeMarline = this;
-    this.stream.on('resize', this.handleStdoutResize$);
+    if (!this._resizeListened) {
+      this._resizeListened = true;
+      this.stream.addListener('resize', this.handleStdoutResize$);
+    }
 
     this.handleStdoutResize();
     this.setMargin();
@@ -106,7 +105,15 @@ export class Marline extends EventEmitter {
     if (!this._started) return;
     this._started = false;
     activeMarline = null;
-    this.stream.off('resize', this.handleStdoutResize$);
+    
+    if (this._resizeListened) {
+      if (this.stream.removeListener) {
+        try {
+          this.stream.removeListener('resize', this.handleStdoutResize$);
+          this._resizeListened = false;
+        } catch (e) { }
+      }
+    }
 
     if (!this.isAvailable) return;
     this.resetMargin();
@@ -118,7 +125,6 @@ export class Marline extends EventEmitter {
   private get canDraw() {
     return this.isAvailable && this._termSize;
   }
-
 
   private setMargin() {
     if (!this.canDraw) return;
