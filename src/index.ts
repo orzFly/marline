@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import exitHook from 'exit-hook';
 
 namespace ansiEscapes {
@@ -23,7 +24,7 @@ interface ITermSize {
   columns: number;
 }
 
-export class Marline {
+export class Marline extends EventEmitter {
   readonly stream: NodeJS.WriteStream;
   readonly marginBottom: number
   readonly marginTop: number
@@ -36,6 +37,8 @@ export class Marline {
     marginBottom?: number,
     marginTop?: number
   } = {}) {
+    super();
+
     this.stream = options.stream || process.stderr;
     this.isAvailable = false;
     do {
@@ -72,6 +75,9 @@ export class Marline {
 
     this._termSize = this.getTermSize();
     if (this._started) {
+      if (this._termSize) {
+        this.emit('resize', this._termSize!.columns);
+      }
       this.setMargin();
       this.redraw();
     }
