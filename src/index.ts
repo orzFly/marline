@@ -79,6 +79,7 @@ export class Marline {
     if (!this.isAvailable) return;
     if (this._started) return;
     if (activeMarline) throw new Error('Another Marline instance is running.');
+    installExitHook();
     this._started = true;
     activeMarline = this;
     this.stream.on('resize', this.handleStdoutResize$);
@@ -173,6 +174,12 @@ export class Marline {
 }
 
 let activeMarline: Marline | null = null;
-exitHook(() => {
-  if (activeMarline) activeMarline.stop();
-})
+let exitHookInstalled = false;
+function installExitHook() {
+  if (exitHookInstalled) return;
+
+  exitHookInstalled = true;
+  exitHook(() => {
+    if (activeMarline) activeMarline.stop();
+  })
+}
