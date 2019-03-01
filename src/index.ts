@@ -2,13 +2,20 @@ import exitHook from 'exit-hook';
 
 namespace ansiEscapes {
   export const eraseLine = '\x1B[2K';
-  export const cursorSavePosition = '\x1B[s';
-  export const cursorRestorePosition = '\x1B[u';
   export const cursorDown = (count: number = 1) => `\x1B[${count}B`
   export const cursorUp = (count: number = 1) => `\x1B[${count}A`
   export const cursorTo = (x: number, y: number) => `\x1B[${y};${x}H`
   export const setTopBottomMargin = (top: number = 1, bottom?: number) => `\x1B[${top};${bottom || ""}r`
   export const resetTopBottomMargin = `\x1B[;r`
+
+  export let cursorSavePosition = '\x1B[s';
+  export let cursorRestorePosition = '\x1B[u';
+
+  const isAppleTerminal = process.env.TERM_PROGRAM === 'Apple_Terminal' && process.env.TERM === 'xterm-256color';
+  if (isAppleTerminal) {
+    cursorSavePosition = '\x1B[7';
+    cursorRestorePosition = '\x1B[8';
+  }
 }
 
 interface ITermSize {
