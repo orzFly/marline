@@ -21,21 +21,19 @@ function junkWord() {
 async function main() {
   const marline = new Marline({
     marginTop: 0,
-    marginBottom: 4
+    marginBottom: 4,
+    render: (marline, width) => {
+      const barWidth = width - 6;
+      const fillWidth = Math.floor(progress / 100 * barWidth);
+      marline.bottom.set(0, `[${new Array(fillWidth).fill("=").join("")}${new Array(barWidth - fillWidth).fill(" ").join("")}] ${progress}`)
+      marline.bottom.set(1, `Top Language: ${top(0)}`);
+      marline.bottom.set(2, `Top Verb    : ${top(1)}`);
+      marline.bottom.set(3, `Top Attitude: ${top(2)}`);
+      marline.redraw();
+    }
   });
 
-  marline.on('resize', (width) => refresh(width));
-
   let progress = 0;
-  const refresh = (width: number = marline.termSize!.columns) => {
-    const barWidth = width - 6;
-    const fillWidth = Math.floor(progress / 100 * barWidth);
-    marline.bufferBottom[0] = `[${new Array(fillWidth).fill("=").join("")}${new Array(barWidth - fillWidth).fill(" ").join("")}] ${progress}`
-    marline.bufferBottom[1] = `Top Language: ${top(0)}`;
-    marline.bufferBottom[2] = `Top Verb    : ${top(1)}`;
-    marline.bufferBottom[3] = `Top Attitude: ${top(2)}`;
-  }
-
   const wordCount: { [key: string]: number }[] = [];
   function top(index: number) {
     const map = wordCount[index] || {};
@@ -53,8 +51,7 @@ async function main() {
   marline.start();
   for (let i = 0; i <= 100; i++) {
     progress = i;
-    refresh();
-    marline.redraw();
+    marline.refresh();
     for (let j = 0; j < 20; j++) {
       const word = junkWord();
       console.log(word);
