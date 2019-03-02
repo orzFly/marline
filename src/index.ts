@@ -24,6 +24,8 @@ export class Marline extends EventEmitter {
   readonly marginTop: number
   readonly bufferTop: string[]
   readonly bufferBottom: string[]
+  private drawnTop: string[]
+  private drawnBottom: string[]
   readonly isAvailable: boolean
 
   constructor(options: {
@@ -49,6 +51,9 @@ export class Marline extends EventEmitter {
 
     this.bufferTop = new Array<string>(this.marginTop).fill("");
     this.bufferBottom = new Array<string>(this.marginBottom).fill("");
+
+    this.drawnTop = this.bufferTop.slice(0);
+    this.drawnBottom = this.bufferBottom.slice(0);
   }
 
   private getTermSize() {
@@ -73,7 +78,7 @@ export class Marline extends EventEmitter {
         this.emit('resize', this._termSize!.columns);
       }
       this.setMargin();
-      this.redraw();
+      this.redraw(true);
     }
   }
 
@@ -98,14 +103,14 @@ export class Marline extends EventEmitter {
 
     this.handleStdoutResize();
     this.setMargin();
-    this.redrawInternal();
+    this.redrawInternal(true);
   }
 
   stop() {
     if (!this._started) return;
     this._started = false;
     activeMarline = null;
-    
+
     if (this._resizeListened) {
       if (this.stream.removeListener) {
         try {
@@ -119,7 +124,7 @@ export class Marline extends EventEmitter {
     this.resetMargin();
     this.bufferBottom.fill("");
     this.bufferTop.fill("");
-    this.redrawInternal();
+    this.redrawInternal(true);
   }
 
   private get canDraw() {
@@ -159,33 +164,39 @@ export class Marline extends EventEmitter {
     this.stream.write(seq.join(""));
   }
 
-  public redraw() {
+  public redraw(force: boolean = false) {
     if (!this._started) return;
-    this.redrawInternal();
+    this.redrawInternal(force);
   }
 
-  private redrawInternal() {
+  private redrawInternal(force: boolean = false) {
     if (!this.canDraw) return;
 
-    const seq: string[] = [];
-    seq.push(ansiEscapes.cursorSavePosition);
+    const lines: string[] = [];
     for (let i = 0; i < this.marginTop; i++) {
-      seq.push(this.redrawTopLineSeq(i));
+      if (!force && this.bufferTop[i] === this.drawnTop[i]) continue;
+      lines.push(this.redrawTopLineSeq(i));
     }
     for (let i = 0; i < this.marginBottom; i++) {
-      seq.push(this.redrawBottomLineSeq(i));
+      if (!force && this.bufferBottom[i] === this.drawnBottom[i]) continue;
+      lines.push(this.redrawBottomLineSeq(i));
     }
-    seq.push(ansiEscapes.cursorRestorePosition);
-    this.stream.write(seq.join(""));
+
+    if (lines.length === 0) return;
+    lines.unshift(ansiEscapes.cursorSavePosition);
+    lines.push(ansiEscapes.cursorRestorePosition);
+    this.stream.write(lines.join(""));
   }
 
   private redrawTopLineSeq(index: number) {
+    this.drawnTop[index] = this.bufferTop[index];
     return ansiEscapes.cursorTo(1, index + 1) +
       ansiEscapes.eraseLine +
       String(this.bufferTop[index] || "");
   }
 
   private redrawBottomLineSeq(index: number) {
+    this.drawnBottom[index] = this.bufferBottom[index];
     return ansiEscapes.cursorTo(1, this._termSize!.rows - this.marginBottom + index + 1) +
       ansiEscapes.eraseLine +
       String(this.bufferBottom[index] || "");
